@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Task Manager</title>
+</head>
+<body>
+  <h1>Task Manager</h1>
+
+  <form id="taskForm">
+    <input type="text" id="taskTitle" placeholder="Enter task" required />
+    <button type="submit">Add Task</button>
+  </form>
+
+  <ul id="taskList"></ul>
+
+  <script>
+    async function loadTasks() {
+      const response = await fetch('/tasks');
+      const tasks = await response.json();
+      const taskList = document.getElementById('taskList');
+      taskList.innerHTML = '';
+      tasks.forEach(task => {
+        const li = document.createElement('li');
+        li.textContent = `${task.title} - ${task.done ? 'Done' : 'Pending'}`;
+        if (!task.done) {
+          const btn = document.createElement('button');
+          btn.textContent = 'Mark Done';
+          btn.onclick = async () => {
+            await fetch(`/tasks/${task.id}`, { method: 'PUT' });
+            loadTasks();
+          };
+          li.appendChild(btn);
+        }
+        taskList.appendChild(li);
+      });
+    }
+
+    document.getElementById('taskForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const title = document.getElementById('taskTitle').value;
+      await fetch('/tasks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title })
+      });
+      document.getElementById('taskTitle').value = '';
+      loadTasks();
+    });
+
+    loadTasks();
+  </script>
+</body>
+</html>
+
