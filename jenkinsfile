@@ -1,0 +1,56 @@
+pipeline {
+    agent any
+    environment {
+        DOCKER_IMAGE = 'omar2682/to-do-app:latest'
+        DOCKER_CREDENTIALS_ID = 'jenkins-dockerhub-token'
+    }
+    stages {
+        stage('Checkout') {
+            steps {
+                git(
+                    url: 'https://github.com/Omar-268/TO-DO_App.git',
+                    credentialsId: 'jenkins-github-token',
+                    branch: 'main'
+                )
+            }
+        }
+
+        stage('Docker Login & Build') {
+            steps {
+                script {
+                    withCredentials([usernamePassword(
+                        credentialsId: DOCKER_CREDENTIALS_ID,
+                        usernameVariable: 'DOCKER_USER',
+                        passwordVariable: 'DOCKER_PASS'
+                    )]) {
+                        sh '''
+                            echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
+                            docker build -t $DOCKER_IMAGE .
+                        '''
+                    }
+                }
+            }
+        }
+
+        stage('Push Docker Image to Docker Hub') {
+            steps {
+                script {
+                    sh "docker push $DOCKER_IMAGE"
+                }
+            }
+        }
+    
+stage('Run Ansible Playbook') {
+            steps {
+                script {
+                    sshagent(credentials: ['vagrant-vm1', 'vagrant-vm2']) {
+                        sh """
+                            cd ansible
+                            ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -i inventory playbook.yml
+                        """
+                    }
+                }
+            }
+        }
+    }
+}
